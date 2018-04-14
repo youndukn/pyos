@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+{% for videos in stream %}
+
+          <article class="center slider">
+
+              {% for video in videos %}
+
+                    {% if (video.title != "-")%}
+                    <div class="grid-33">
+                        <img src="https://img.youtube.com/vi/{{ video.videoId }}/0.jpg", href="https://www.youtube.com/watch?v={{ video.videoId }}">
+                            <a class="{{video.channel.name}}" href="https://www.youtube.com/watch?v={{ video.videoId }}">{{ video.title }}</a>
+                    </div>
+                    {%else%}
+                    <div class="grid-33">
+                        <a>&nbsp</a>
+                    </div>
+                    {% endif%}
+
+
+              {% endfor %}
+          </article>
+{% endfor %}
+{% endblock %}
