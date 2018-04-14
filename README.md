@@ -4,7 +4,7 @@ Put Yourself on Other's Shoes
 Installation
 ------------
 
-Test on Python3
+Tested on Python3.5
 
     $ clone this repo
     $ pip install -r requirements.txt
