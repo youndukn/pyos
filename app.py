@@ -3,7 +3,7 @@
 import os
 
 import flask
-from flask import render_template
+from flask import render_template, redirect, url_for
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -62,12 +62,13 @@ def index():
         return render_template('layout.html')
 
 
-@app.route('/admin/<type>')
-@app.route('/admin')
+@app.route('/admin/<type>', methods=('GET', 'POST'))
+@app.route('/admin', methods=('GET', 'POST'))
 def admin(type=None):
     form = forms.AdminForm()
     if form.validate_on_submit():
-        if type == "youtube":
+        if type == "youtube" or form.stream_type.data.lower() == "youtube":
+
             if 'credentials' not in flask.session:
                 return flask.redirect('authorize')
 
@@ -84,7 +85,7 @@ def admin(type=None):
                     youtube.channels_list_by_username(client,
                                               part='snippet,contentDetails',
                                               forUsername=news)
-        elif type == "naver":
+        elif type == "naver" or form.stream_type.data.lower() == "naver":
             naver.crawl_naver()
 
         channels = [[], [], [], [], []]
@@ -98,9 +99,9 @@ def admin(type=None):
 
         dailies = Dailies(channels)
 
-        return render_template('new_video_stream.html', stream=dailies.process_vector_relevance())
+        return redirect(url_for('new_video_stream.html', stream=dailies.process_vector_relevance()))
 
-    return render_template('admin.html')
+    return render_template('admin.html', form=form)
 
 
 @app.route('/authorize')

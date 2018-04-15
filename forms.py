@@ -6,4 +6,4 @@ from wtforms.validators import (DataRequired, Regexp, ValidationError, Email,
                                 Length, EqualTo)
 
 class AdminForm(FlaskForm):
-    amount = IntegerField("Amount", validators = [DataRequired()])
+    stream_type = StringField("Youtube or Naver?", validators = [DataRequired()])
