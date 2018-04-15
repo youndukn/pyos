@@ -1,9 +1,10 @@
-from konlpy.tag import Twitter
 
+from process_text import TextFilter
+import models_trainable
 import seq2conv
+
 import operator
 import numpy
-import models_trainable
 from peewee import IntegrityError
 
 queries = ["테러", "사고", "건강", "일본", "북미",
@@ -14,10 +15,9 @@ queries = ["테러", "사고", "건강", "일본", "북미",
            "FTA", "경제", "부동산",
            "미투", "박근혜"]
 
-removables = ["날씨", "클로징", "다시", "헤드라인"]
+removables = ["날씨", "클로징", "다시보기", "헤드라인"]
 
 priors = ["단독"]
-
 
 class Dailies:
 
@@ -34,34 +34,16 @@ class Dailies:
 
     def __process_videos(self):
 
-        twitter = Twitter()
-
+        text_filter = TextFilter()
         for videos in self.channels:
             for video in videos:
-                title = video.title
-                title_processed = ""
-                title_list = twitter.pos(title, norm=True, stem=True)
-                title_nouns = []
-                for word, pumsa in title_list:
-                    if not pumsa in ["Josa", "Eomi", "Punctuation", "URL", "Unknown"] \
-                            and not word in ['SBS', 'JTBC', 'MBC', 'TVCHOSUN', 'KBS', '뉴스', 'News']:
-                        title_processed += word
-                        title_processed += " "
-                        if pumsa == "Noun" and len(word) > 1:
-                            title_nouns.append(word)
-                print(title_processed)
-                setattr(video, "ptitle", title_processed)
-                setattr(video, "ntitle", title_nouns)
+                text_filter.set_text(video.title)
 
-                content = video.content
-                content_processed = ""
-                content_list = twitter.pos(content, norm=True, stem=True)
-                for word, pumsa in content_list:
-                    if not pumsa in ["Josa", "Eomi", "Punctuation", "URL", "Unknown"]:
-                        content_processed += word
-                        content_processed += " "
+                text_filter.remove_pumsas()
+                text_filter.remove_texts()
 
-                setattr(video, "pcontent", content_processed)
+                setattr(video, "ptitle", str(text_filter))
+                setattr(video, "ntitle", text_filter.get_texts_pumsa("Noun"))
 
                 self.videos.append(video)
 
@@ -99,14 +81,16 @@ class Dailies:
             removable.append(values[1])
 
         for i in range(30):
-            if not self.nouns[i][0] in removable:
+            noun = self.nouns[i][0]
+            if not noun in removable:
                 try:
+                    print("Trying to add Keyword : {}".format(noun))
                     models_trainable.Keyword.create(
-                        name=self.nouns[i][0],
+                        name=noun,
                         t_type=3
                     )
                 except IntegrityError:
-                    print("Error : ", self.nouns[i][0])
+                    print("Already Exist Keyword : ", self.nouns[i][0])
                     pass
 
     def process_relevance(self):
@@ -192,16 +176,22 @@ class Dailies:
         return self.processed_channels
 
     def process_vector_relevance(self):
-        print(len(self.nouns))
 
-        for word in self.nouns:
-            print(word)
-
+        #filter removables and/or video that are more than 2 minute
         filtered = []
         for video in self.videos:
-            if video.duration < 120:
+            include = True
+            for removable in removables:
+                if removable in video.title:
+                    include = False
+
+            if video.duration > 120:
+                include = False
+
+            if include:
                 filtered.append(video)
 
+        #Relevance matrix calculated using vectors from ML
         relevance_matrix = numpy.zeros((len(filtered), len(filtered)))
         for i, video1 in enumerate(filtered):
             for j, video2 in enumerate(filtered):

@@ -12,7 +12,7 @@ from tensorflow.python.keras.layers import Input, Dense, GRU, Embedding
 from tensorflow.python.keras.optimizers import RMSprop
 from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 
-from konlpy.tag import Twitter
+from process_text import TextFilter
 
 path_checkpoint = './check_p/21_checkpoint.keras'
 
@@ -160,21 +160,16 @@ def translate(model_encoder,
     output_tokens = decoder_input_data[0]
 
     # Print the input-text.
-    print("Input text:")
-    print(input_text)
-    print()
+    print("Input text:", input_text)
 
     # Print the translated output-text.
-    print("Translated text:")
-    print(output_text)
-    print()
+    print("Translated text:",  output_text)
 
     # Optionally print the true translated text.
     if true_output_text is not None:
-        print("True output text:")
-        print(true_output_text)
-        print()
+        print("True output text:", true_output_text)
 
+    print()
     return output_text.replace(mark_end, ""), vector
 
 def get_model():
@@ -286,7 +281,8 @@ def train_model():
     data_src = []
     data_dest = []
 
-    twitter = Twitter()
+    text_filter = TextFilter()
+
     for news in queries:
         try:
             keyword = models_trainable.Keyword.select().where(models_trainable.Keyword.name ** news).get()
@@ -301,15 +297,10 @@ def train_model():
                 for ch in ['</b>', '<b>', '&quot;', '&apos;', '…']:
                     title = title.replace(ch, "")
 
-                title_f = ""
-                titleList = twitter.pos(title, norm=True, stem=True)
+                text_filter.set_text(title)
+                text_filter.remove_pumsas()
 
-                for word, pumsa in titleList:
-                    if not pumsa in ["Josa", "Eomi", "Punctuation", "URL", "Unknown"]:
-                        title_f += word
-                        title_f += " "
-
-                data_array.append([mark_start + keyword.name + mark_end, title_f])
+                data_array.append([mark_start + keyword.name + mark_end, str(text_filter)])
 
         except models_trainable.DoesNotExist:
             print("does not exist")

@@ -88,18 +88,7 @@ def admin(type=None):
         elif type == "naver" or form.stream_type.data.lower() == "naver":
             naver.crawl_naver()
 
-        channels = [[], [], [], [], []]
-        for i, news in enumerate(news_list):
-            channel = models.Channel.select().where(models.Channel.name ** news).get()
-            videos_c = models.Video.select().order_by(models.Video.publishedAt.desc()).where(
-                models.Video.channel == channel,
-                models.Video.publishedAt + timedelta(days=1) > datetime.utcnow()
-            )
-            channels[i] = videos_c
-
-        dailies = Dailies(channels)
-
-        return redirect(url_for('new_video_stream.html', stream=dailies.process_vector_relevance()))
+        return redirect(url_for('index'))
 
     return render_template('admin.html', form=form)
 
