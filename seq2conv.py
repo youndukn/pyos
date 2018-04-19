@@ -93,6 +93,8 @@ def translate(model_encoder,
     # the LSTM has two internal states.
     initial_state = model_encoder.predict(input_tokens)
 
+    vector = initial_state
+
     # Max number of tokens / words in the output sequence.
     max_tokens = tokenizer_dest.max_tokens
 
@@ -111,8 +113,6 @@ def translate(model_encoder,
     # Initialize the number of tokens we have processed.
     count_tokens = 0
 
-
-    vector = None
 
     # While we haven't sampled the special end-token for ' eeee'
     # and we haven't processed the max number of tokens.
@@ -148,8 +148,6 @@ def translate(model_encoder,
 
         # Convert to an integer-token.
         token_int = np.argmax(token_onehot)
-        if token_int != token_end:
-            vector = token_onehot
 
         # Lookup the word corresponding to this integer-token.
         sampled_word = tokenizer_dest.token_to_word(token_int)

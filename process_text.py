@@ -41,7 +41,7 @@ class TextFilter:
         processed_text_temp = []
 
         for word, pumsa in self.__processed_text:
-            if not pumsa in removable_texts:
+            if not word in removable_texts:
                 processed_text_temp.append((word, pumsa))
 
         self.__processed_text = processed_text_temp
