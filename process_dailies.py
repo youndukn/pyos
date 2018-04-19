@@ -86,8 +86,7 @@ class Dailies:
                 try:
                     print("Trying to add Keyword : {}".format(noun))
                     models_trainable.Keyword.create(
-                        name=noun,
-                        t_type=3
+                        name=noun
                     )
                 except IntegrityError:
                     print("Already Exist Keyword : ", self.nouns[i][0])

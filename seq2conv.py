@@ -28,7 +28,11 @@ queries_unknown = ["쓰레기", "보이스피싱", "야구", "농구",
                    "스포츠", "개임", "자율주행", "사고",
                    "UAE", "졸음운전", "몰래카메라", "골프", "스마트폰", "전자발찌", "커피"
                                                                  "술", "마약", "폭력"]
+political = ["일본", "북미", "한미", "정상회담", "선거", "김기식", "국방", "국회",
+             "청화대", "비핵화", "자유한국당", "더불어민주당", "개헌", "문재인", "대통령",
+             "이명박", "핵무기", "중국", "미국", "북한", "FTA", "경제", "부동산", "박근혜"]
 
+non_political = []
 mark_start = 'ssss '
 mark_end = ' eeee'
 
@@ -283,9 +287,13 @@ def train_model():
 
     text_filter = TextFilter()
 
-    for news in queries:
+    keyword_models = models_trainable.Keyword.select().where(
+        models_trainable.Keyword.t_type >= 1,
+        models_trainable.Keyword.t_type <= 2
+    )
+
+    for keyword in keyword_models:
         try:
-            keyword = models_trainable.Keyword.select().where(models_trainable.Keyword.name ** news).get()
 
             videos = models_trainable.Video.select()\
                 .join(models_trainable.Relationship, on=models_trainable.Relationship.to_video)\

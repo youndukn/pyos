@@ -6,7 +6,7 @@ DATABASE = SqliteDatabase('news_trainable.db')
 
 class Keyword(Model):
     name = CharField(unique=True)
-    t_type = IntegerField()
+    t_type = IntegerField(default=-1)
 
     class Meta:
         database = DATABASE
