@@ -3,17 +3,14 @@
 {% block content %}
 
 {% for videos in stream %}
-
           <article class="row">
-
               {% for video in videos %}
-
                     <div class="grid-33">
                         <img src="https://img.youtube.com/vi/{{ video.videoId }}/0.jpg", href="https://www.youtube.com/watch?v={{ video.videoId }}">
                             <a class="{{video.channel.name}}" href="https://www.youtube.com/watch?v={{ video.videoId }}">{{ video.title }}</a>
                     </div>
-
               {% endfor %}
           </article>
 {% endfor %}
+
 {% endblock %}

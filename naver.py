@@ -4,7 +4,6 @@ import models_trainable
 from bs4 import BeautifulSoup
 
 from dateutil.parser import parse
-models_trainable.initialized()
 
 t_default = -1
 t_political = 1

@@ -305,6 +305,7 @@ def train_model():
 
                 text_filter.set_text(title)
                 text_filter.remove_pumsas()
+                text_filter.remove_texts()
 
                 data_array.append([mark_start + keyword.name + mark_end, str(text_filter)])
 
@@ -428,6 +429,47 @@ def get_vectors(input_videos):
 
     return keywords, vectors
 
+
+def get_k_mean_clustered(input_videos, num_clusters = 40):
+
+    vectors = []
+    for video in input_videos:
+        vectors.append(np.array(video.vector_processed[0]))
+
+    np_vectors = np.array(vectors)
+
+    def input_fn():
+        return tf.train.limit_epochs(
+            tf.convert_to_tensor(np_vectors, dtype=tf.float32), num_epochs=1)
+
+    kmeans = tf.contrib.factorization.KMeansClustering(
+        num_clusters=num_clusters, use_mini_batch=False)
+
+    num_iterations = 10
+    previous_centers = None
+
+    for _ in range(num_iterations):
+        kmeans.train(input_fn)
+        cluster_centers = kmeans.cluster_centers()
+        if previous_centers is not None:
+            print ('delta:', cluster_centers - previous_centers)
+        previous_centers = cluster_centers
+    print ('cluster centers:', cluster_centers)
+
+    # map the input points to their clusters
+    cluster_indices = list(kmeans.predict_cluster_index(input_fn))
+
+    for video, cluster_index in zip(input_videos, cluster_indices):
+        setattr(video, "cluster", cluster_index)
+
+    for cc in range(num_clusters):
+        for i, point in enumerate(np_vectors):
+            if cc == cluster_indices[i]:
+                video_title = input_videos[i].title
+                cluster_index = cluster_indices[i]
+                print('video:', video_title, 'is in cluster', cluster_index)
+
+    return cluster_centers
 
 if __name__ == '__main__':
     train_model()

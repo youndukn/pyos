@@ -20,11 +20,11 @@ import naver
 
 from process_dailies import Dailies
 
-news_list = ['tvchosun01', 'sbsnews8', 'JTBC10news', 'NewsKBS', 'MBCnews']
+news_list = ['tvchosun01', 'sbsnews8', 'JTBC10news', 'MBCnews']
 
 block_list = []
 
-# The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
+# The CLIENT_SECRETS_FILE variable specifies the name of a file  that contains
 # the OAuth 2.0 information for this application, including its client_id and
 # client_secret.
 CLIENT_SECRETS_FILE = "client_secret.json"
@@ -57,7 +57,7 @@ def index():
     dailies = Dailies(channels)
 
     if dailies:
-        return render_template('new_video_stream.html', stream=dailies.process_vector_relevance())
+        return render_template('new_video_stream.html', stream=dailies.process_kmeans_clusters())
     else:
         return render_template('layout.html')
 

@@ -25,12 +25,14 @@ class Dailies:
         self.channels = channels
         self.final_videos = []
         self.videos = []
+        self.filtered = []
         self.processed_channels = []
         self.nouns = []
 
         self.__process_videos()
         self.__process_vector()
         self.__process_noun()
+        self.__filter_videos()
 
     def __process_videos(self):
 
@@ -68,7 +70,7 @@ class Dailies:
                 for j in range(i+1, 30):
                     first = self.nouns[i][0]
                     second = self.nouns[j][0]
-                    if first in video.ntitle and second in video.ntitle:
+                    if first in video.ntitle and second in video.ntitle and len(first) > 1:
                         combination_noun = first+" "+second
                         if combination_noun in combination_dict.keys():
                             combination_dict[combination_noun] += 1
@@ -174,10 +176,10 @@ class Dailies:
 
         return self.processed_channels
 
-    def process_vector_relevance(self):
+    def __filter_videos(self):
 
         #filter removables and/or video that are more than 2 minute
-        filtered = []
+        self.filtered = []
         for video in self.videos:
             include = True
             for removable in removables:
@@ -188,12 +190,14 @@ class Dailies:
                 include = False
 
             if include:
-                filtered.append(video)
+                self.filtered.append(video)
+
+    def process_vector_relevance(self):
 
         #Relevance matrix calculated using vectors from ML
-        relevance_matrix = numpy.zeros((len(filtered), len(filtered)))
-        for i, video1 in enumerate(filtered):
-            for j, video2 in enumerate(filtered):
+        relevance_matrix = numpy.zeros((len(self.filtered), len(self.filtered)))
+        for i, video1 in enumerate(self.filtered):
+            for j, video2 in enumerate(self.filtered):
                 vector1 = video1.vector_processed
                 vector2 = video2.vector_processed
 
@@ -206,7 +210,7 @@ class Dailies:
         index = numpy.argmin(average)
 
         selected = []
-        while len(selected) < len(filtered):
+        while len(selected) < len(self.filtered):
             sorted_values = numpy.argsort(relevance_matrix[index])
             for next_index in sorted_values:
                 if not next_index in selected:
@@ -219,7 +223,46 @@ class Dailies:
             if i % 3 == 0:
                 column = []
                 self.processed_channels.append(column)
-            column.append(filtered[index])
+            column.append(self.filtered[index])
 
         return self.processed_channels
 
+
+    def process_kmeans_clusters(self, numb_clusters=40):
+
+        mean_cluster = seq2conv.get_k_mean_clustered(self.filtered, numb_clusters)
+        self.processed_channels = []
+
+        bucket_video = []
+        bucket_vector = []
+        for i in range(numb_clusters):
+            bucket_video.append([])
+            bucket_vector.append([])
+
+        for video in self.filtered:
+            bucket_video[video.cluster].append(video)
+            dist = numpy.linalg.norm(mean_cluster[video.cluster] - video.vector_processed)
+            bucket_vector[video.cluster].append(dist)
+
+        bucket_vector = numpy.array(bucket_vector)
+
+        bucket_lens = []
+        for i, vectors in enumerate(bucket_vector):
+            bucket_lens.append(len(bucket_vector))
+            sorted_values = numpy.argsort(vectors)
+            column = []
+            for j, index in enumerate(sorted_values):
+                if len(column)> 1:
+                    break
+
+                if j==0:
+                    column.append(bucket_video[i][index])
+                else:
+                    if column[0].channel.name != bucket_video[i][index].channel.name:
+                        column.append(bucket_video[i][index])
+            self.processed_channels.append(column)
+
+
+        self.processed_channels = sorted(self.processed_channels, key=lambda x: len(x), reverse=True)
+
+        return self.processed_channels
