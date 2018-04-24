@@ -2,6 +2,7 @@
 from process_text import TextFilter
 import models_trainable
 import seq2conv
+import seq2mseq
 
 import operator
 import numpy
@@ -41,16 +42,18 @@ class Dailies:
             for video in videos:
                 text_filter.set_text(video.title)
 
-                text_filter.remove_pumsas()
-                text_filter.remove_texts()
+                text_filter.regex_from_text(r'\[[^)]*\]')
+                text_filter.remove_texts_from_text()
+                text_filter.remove_pumsas_from_list()
+                text_filter.remove_texts_from_list()
 
                 setattr(video, "ptitle", str(text_filter))
-                setattr(video, "ntitle", text_filter.get_texts_pumsa("Noun"))
+                setattr(video, "ntitle", text_filter.get_texts_from_list("Noun"))
 
                 self.videos.append(video)
 
     def __process_vector(self):
-        keywords, vectors  = seq2conv.get_vectors(self.videos)
+        keywords, vectors  = seq2conv.get_vectors(self.videos, autoencoder=True)
         for video, keyword, vector in zip(self.videos, keywords, vectors):
             setattr(video, "keyword_processed", keyword)
             setattr(video, "vector_processed", vector)
@@ -228,7 +231,7 @@ class Dailies:
         return self.processed_channels
 
 
-    def process_kmeans_clusters(self, numb_clusters=40):
+    def process_kmeans_clusters(self, numb_clusters=30):
 
         mean_cluster = seq2conv.get_k_mean_clustered(self.filtered, numb_clusters)
         self.processed_channels = []
@@ -252,7 +255,7 @@ class Dailies:
             sorted_values = numpy.argsort(vectors)
             column = []
             for j, index in enumerate(sorted_values):
-                if len(column)> 1:
+                if len(column)> 2:
                     break
 
                 if j==0:

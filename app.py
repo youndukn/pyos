@@ -10,7 +10,7 @@ import google_auth_oauthlib.flow
 import googleapiclient.discovery
 
 import models
-
+from dailies import dailies_api
 from datetime import datetime, timedelta
 
 import forms
@@ -20,7 +20,7 @@ import naver
 
 from process_dailies import Dailies
 
-news_list = ['tvchosun01', 'sbsnews8', 'JTBC10news', 'MBCnews']
+news_list = ['JTBC10news', 'MBCnews', 'sbsnews8', 'tvchosun01']
 
 block_list = []
 
@@ -36,6 +36,8 @@ API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 
 app = flask.Flask(__name__)
+#app.register_blueprint(dailies_api)
+
 # Note: A secret key is included in the sample so that it works, but if youp
 # use this code in your application please replace this with a truly secret
 # key. See http://flask.pocoo.org/docs/0.12/quickstart/#sessions.
@@ -141,7 +143,7 @@ def oauth2callback():
         'scopes': credentials.scopes
     }
 
-    return flask.redirect(flask.url_for('index'))
+    return flask.redirect(flask.url_for('admin'))
 
 
 if __name__ == '__main__':

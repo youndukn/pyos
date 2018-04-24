@@ -174,7 +174,7 @@ def translate(model_encoder,
     print()
     return output_text.replace(mark_end, ""), vector
 
-def get_model():
+def get_model(autoencoder=True):
 
     #
     encoder_input = Input(shape=(None, ), name='encoder_input')
@@ -217,10 +217,14 @@ def get_model():
                                   name='decoder_initial_state')
 
     decoder_input = Input(shape=(None, ), name='decoder_input')
-
-    decoder_embedding = Embedding(input_dim=len(queries)+3,
-                                  output_dim=embedding_size,
-                                  name='decoder_embedding')
+    if autoencoder:
+        decoder_embedding = Embedding(input_dim=num_words,
+                                      output_dim=embedding_size,
+                                      name='decoder_embedding')
+    else:
+        decoder_embedding = Embedding(input_dim=len(queries) + 3,
+                                      output_dim=embedding_size,
+                                      name='decoder_embedding')
 
     decoder_gru1 = GRU(state_size, name='decoder_gru1',
                        return_sequences=True)
@@ -228,11 +232,14 @@ def get_model():
                        return_sequences=True)
     decoder_gru3 = GRU(state_size, name='decoder_gru3',
                        return_sequences=True)
-
-    decoder_dense = Dense(len(queries)+3,
-                          activation='linear',
-                          name='decoder_output')
-
+    if autoencoder:
+        decoder_dense = Dense(num_words,
+                              activation='linear',
+                              name='decoder_output')
+    else:
+        decoder_dense = Dense(len(queries) + 3,
+                              activation='linear',
+                              name='decoder_output')
 
     def connect_decoder(initial_state):
         # Start the decoder-network with its input-layer.
@@ -275,64 +282,90 @@ def get_model():
     return model_train, model_encoder, model_decoder
 
 
-def train_model():
+def train_model(autoencoder=False, reload=False):
 
     models_trainable.initialized()
 
     data_array = []
     data_src = []
     data_dest = []
+    if reload:
+        text_filter = TextFilter()
+        if not autoencoder:
+            keyword_models = models_trainable.Keyword.select().where(
+                models_trainable.Keyword.t_type >= 1,
+                models_trainable.Keyword.t_type <= 2
+            )
 
-    text_filter = TextFilter()
+            for keyword in keyword_models:
+                try:
 
-    keyword_models = models_trainable.Keyword.select().where(
-        models_trainable.Keyword.t_type >= 1,
-        models_trainable.Keyword.t_type <= 2
-    )
+                    videos = models_trainable.Video.select()\
+                        .join(models_trainable.Relationship, on=models_trainable.Relationship.to_video)\
+                        .where(models_trainable.Relationship.from_keyword == keyword)
+                    print(keyword.name, len(videos))
+                    for video in videos:
+                        title = video.title
+                        text_filter.set_text(title)
 
-    for keyword in keyword_models:
-        try:
+                        text_filter.regex_from_text(r'\[[^)]*\]')
+                        text_filter.remove_texts_from_text()
+                        text_filter.remove_pumsas_from_list()
+                        text_filter.remove_texts_from_text()
 
-            videos = models_trainable.Video.select()\
-                .join(models_trainable.Relationship, on=models_trainable.Relationship.to_video)\
-                .where(models_trainable.Relationship.from_keyword == keyword)
-            print(keyword.name, len(videos))
+                        data_array.append([mark_start + keyword.name + mark_end,
+                                           str(text_filter)])
+
+                except models_trainable.DoesNotExist:
+                    print("does not exist")
+        else:
+            videos = models_trainable.Video.select()
             for video in videos:
                 title = video.title
 
-                for ch in ['</b>', '<b>', '&quot;', '&apos;', '…']:
-                    title = title.replace(ch, "")
-
                 text_filter.set_text(title)
-                text_filter.remove_pumsas()
-                text_filter.remove_texts()
 
-                data_array.append([mark_start + keyword.name + mark_end, str(text_filter)])
+                text_filter.regex_from_text(r'\[[^)]*\]')
+                text_filter.remove_texts_from_text()
+                text_filter.remove_pumsas_from_list()
+                text_filter.remove_texts_from_text()
+                data_array.append([mark_start + str(text_filter) + mark_end,
+                                   str(text_filter)])
 
-        except models_trainable.DoesNotExist:
-            print("does not exist")
+        for value in data_array:
+            data_src.append(value[1])
+            data_dest.append(value[0])
 
-    for value in data_array:
-        data_src.append(value[1])
-        data_dest.append(value[0])
+        # saving
+        with open('data_src.pickle', 'wb') as handle:
+            pickle.dump(data_src, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # saving
-    with open('data_src.pickle', 'wb') as handle:
-        pickle.dump(data_src, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # saving
+        with open('data_dest.pickle', 'wb') as handle:
+            pickle.dump(data_dest, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        # saving
+        with open('data_src.pickle', 'rb') as handle:
+            data_src = pickle.load(handle)
 
-    # saving
-    with open('data_dest.pickle', 'wb') as handle:
-        pickle.dump(data_dest, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # saving
+        with open('data_dest.pickle', 'rb') as handle:
+            data_dest = pickle.load(handle)
 
     tokenizer_src = TokenizerWrap(texts=data_src,
                                   padding='pre',
                                   reverse=True,
                                   num_words=num_words)
-
-    tokenizer_dest = TokenizerWrap(texts=data_dest,
-                                   padding='post',
-                                   reverse=False,
-                                   num_words=len(queries) + 3)
+    if autoencoder:
+        tokenizer_dest = TokenizerWrap(texts=data_dest,
+                                       padding='post',
+                                       reverse=False,
+                                       num_words=num_words)
+    else:
+        tokenizer_dest = TokenizerWrap(texts=data_dest,
+                                       padding='post',
+                                       reverse=False,
+                                       num_words=len(queries) + 3)
 
     tokens_src = tokenizer_src.tokens_padded
     tokens_dest = tokenizer_dest.tokens_padded
@@ -342,7 +375,7 @@ def train_model():
     decoder_input_data = tokens_dest[:, :-1]
     decoder_output_data = tokens_dest[:, 1:]
 
-    model_train, model_encoder, model_decoder = get_model()
+    model_train, model_encoder, model_decoder = get_model(autoencoder)
 
     callback_checkpoint = ModelCheckpoint(filepath=path_checkpoint,
                                           monitor='val_loss',
@@ -378,7 +411,7 @@ def train_model():
             'decoder_output': decoder_output_data
         }
 
-    validation_split = 100 / len(encoder_input_data)
+    validation_split = 500 / len(encoder_input_data)
 
     model_train.fit(x=x_data,
                     y=y_data,
@@ -388,7 +421,7 @@ def train_model():
                     callbacks=callbacks)
 
 
-def get_vectors(input_videos):
+def get_vectors(input_videos, autoencoder=False):
 
     # saving
     with open('data_src.pickle', 'rb') as handle:
@@ -402,13 +435,18 @@ def get_vectors(input_videos):
                                   padding='pre',
                                   reverse=True,
                                   num_words=num_words)
+    if autoencoder:
+        tokenizer_dest = TokenizerWrap(texts=data_dest,
+                                       padding='post',
+                                       reverse=False,
+                                       num_words=num_words)
+    else:
+        tokenizer_dest = TokenizerWrap(texts=data_dest,
+                                       padding='post',
+                                       reverse=False,
+                                       num_words=len(queries) + 3)
 
-    tokenizer_dest = TokenizerWrap(texts=data_dest,
-                                   padding='post',
-                                   reverse=False,
-                                   num_words=len(queries)+3)
-
-    model_train, model_encoder, model_decoder =get_model()
+    model_train, model_encoder, model_decoder =get_model(autoencoder)
 
     try:
         model_train.load_weights(path_checkpoint)
@@ -472,4 +510,4 @@ def get_k_mean_clustered(input_videos, num_clusters = 40):
     return cluster_centers
 
 if __name__ == '__main__':
-    train_model()
+    train_model(autoencoder=True)

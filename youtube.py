@@ -63,7 +63,7 @@ def channels_playlist_by_username(client, **kwargs):
 
         print("Videos in list %s" % uploads_list_id)
 
-        playlists_list_by_id_endless(
+        playlists_list_by_id(
             client,
             channelModel,
             playlistId=uploads_list_id,
@@ -145,27 +145,22 @@ def playlists_list_by_id_endless(client, channelModel, **kwargs):
 
             try:
                 pubTime = datetime.strptime(publishedAt[:19], "%Y-%m-%dT%H:%M:%S")
-                has_key = False
-                for key in keys:
-                    if key in title:
-                        has_key = True
-                        break
 
-                if has_key:
-                    video_model = models_trainable.Video.create(
-                        publishedAt=pubTime,
-                        title=title,
-                        content=content_details,
-                        originalLink=video_id
-                    )
-
+                video_model = models_trainable.Video.create(
+                    publishedAt=pubTime,
+                    title=title,
+                    content=content_details,
+                    originalLink=video_id
+                )
+                print("CR: {}".format(title))
             except IntegrityError:
                 pass
-
+            """
             try:
 
                 if not video_model:
-                    video_model = models_trainable.Video.get(models_trainable.Video.originalLink == video_id)
+                    video_model = models_trainable.Video.get(
+                        models_trainable.Video.originalLink == video_id)
 
             except DoesNotExist:
                 pass
@@ -174,7 +169,6 @@ def playlists_list_by_id_endless(client, channelModel, **kwargs):
                 for key in keys:
                     if key in title:
                         try:
-
                             models_trainable.Relationship.create(
                                 from_keyword=key_dict[key],
                                 to_video=video_model
@@ -183,7 +177,7 @@ def playlists_list_by_id_endless(client, channelModel, **kwargs):
 
                         except IntegrityError:
                             pass
-
+            """
 
         print("Ok : ", datetime.strptime(publishedAt[:19], "%Y-%m-%dT%H:%M:%S"), datetime.utcnow())
         playlistitems_list_request = client.playlistItems().list_next(
