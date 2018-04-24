@@ -68,11 +68,12 @@ def index():
 @app.route('/admin', methods=('GET', 'POST'))
 def admin(type=None):
     form = forms.AdminForm()
+
+    if 'credentials' not in flask.session:
+        return flask.redirect('authorize')
+
     if form.validate_on_submit():
         if type == "youtube" or form.stream_type.data.lower() == "youtube":
-
-            if 'credentials' not in flask.session:
-                return flask.redirect('authorize')
 
             # Load the credentials from the session.
             credentials = google.oauth2.credentials.Credentials(

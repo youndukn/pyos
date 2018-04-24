@@ -53,7 +53,7 @@ class Dailies:
                 self.videos.append(video)
 
     def __process_vector(self):
-        keywords, vectors  = seq2conv.get_vectors(self.videos, autoencoder=True)
+        keywords, vectors  = seq2mseq.get_vectors(self.videos)
         for video, keyword, vector in zip(self.videos, keywords, vectors):
             setattr(video, "keyword_processed", keyword)
             setattr(video, "vector_processed", vector)

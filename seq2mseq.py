@@ -484,12 +484,12 @@ def train_model(reload=False):
                                           verbose=1,
                                           save_weights_only=True,
                                           save_best_only=True)
-    p_callback_checkpoint = ModelCheckpoint(filepath=k_path_checkpoint,
+    p_callback_checkpoint = ModelCheckpoint(filepath=p_path_checkpoint,
                                           monitor='val_loss',
                                           verbose=1,
                                           save_weights_only=True,
                                           save_best_only=True)
-    a_callback_checkpoint = ModelCheckpoint(filepath=k_path_checkpoint,
+    a_callback_checkpoint = ModelCheckpoint(filepath=a_path_checkpoint,
                                           monitor='val_loss',
                                           verbose=1,
                                           save_weights_only=True,
@@ -566,21 +566,21 @@ def train_model(reload=False):
     for _ in range(10):
         k_model_train.fit(x=k_x_data,
                         y=k_y_data,
-                        batch_size=60,
+                        batch_size=240,
                         epochs=1,
                         validation_split=validation_split,
                         callbacks=k_callbacks)
 
         p_model_train.fit(x=p_x_data,
                         y=p_y_data,
-                        batch_size=60,
+                        batch_size=240,
                         epochs=1,
                         validation_split=validation_split,
                         callbacks=p_callbacks)
 
         a_model_train.fit(x=a_x_data,
                         y=a_y_data,
-                        batch_size=60,
+                        batch_size=240,
                         epochs=1,
                         validation_split=validation_split,
                         callbacks=a_callbacks)
@@ -588,11 +588,7 @@ def train_model(reload=False):
 def get_vectors(input_videos):
 
     # loading
-    with open('counters.pickle', 'rb') as handle:
-        counters = pickle.load(handle)
-
-    # loading
-    with open('data_src.pickle', 'rb') as handle:
+    with open('e_data_src.pickle', 'rb') as handle:
         data_src = pickle.load(handle)
 
     # loading
@@ -606,8 +602,6 @@ def get_vectors(input_videos):
     # loading
     with open('a_data_dest.pickle', 'rb') as handle:
         a_data_dest = pickle.load(handle)
-
-    k_counter, p_counter, a_counter = counters
 
     tokenizer_src = TokenizerWrap(texts=data_src,
                                   padding='pre',
@@ -654,7 +648,8 @@ def get_vectors(input_videos):
 
     keywords = []
     vectors = []
-    for video in input_videos:
+
+    for i, video in enumerate(input_videos):
         keyword, vector = translate(model_encoder,
           k_model_decoder,
           tokenizer_src,
@@ -662,20 +657,27 @@ def get_vectors(input_videos):
           video.ptitle)
         keywords.append(keyword)
         vectors.append(vector)
+        if i < 3:
+            print(keyword, vector)
 
-    for video in input_videos:
-        translate(model_encoder,
+
+    for i, video in enumerate(input_videos):
+        keyword, vector = translate(model_encoder,
                   p_model_decoder,
                   tokenizer_src,
                   p_tokenizer_dest,
                   video.ptitle)
+        if i < 3:
+            print(keyword, vector)
 
-    for video in input_videos:
-        translate(model_encoder,
+    for i, video in enumerate(input_videos):
+        keyword, vector = translate(model_encoder,
                   a_model_decoder,
                   tokenizer_src,
                   a_tokenizer_dest,
                   video.ptitle)
+        if i < 3:
+            print(keyword, vector)
 
     return keywords, vectors
 
