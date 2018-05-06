@@ -103,7 +103,8 @@ def playlists_list_by_id(client, channelModel, **kwargs):
                         content=content_details,
                         channel=channelModel,
                         videoId=video_id,
-                        duration=durTime
+                        duration=durTime,
+                        vector=''
                     )
 
             except IntegrityError:

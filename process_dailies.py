@@ -57,6 +57,8 @@ class Dailies:
         for video, keyword, vector in zip(self.videos, keywords, vectors):
             setattr(video, "keyword_processed", keyword)
             setattr(video, "vector_processed", vector)
+            video.vector = numpy.array(vector).tobytes()
+            video.save()
 
     def __process_noun(self):
         noun_dict = {}

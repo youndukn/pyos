@@ -36,7 +36,7 @@ API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 
 app = flask.Flask(__name__)
-#app.register_blueprint(dailies_api)
+app.register_blueprint(dailies_api)
 
 # Note: A secret key is included in the sample so that it works, but if youp
 # use this code in your application please replace this with a truly secret

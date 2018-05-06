@@ -3,92 +3,49 @@ from flask import Blueprint, abort
 from flask_restful import (Resource, Api, reqparse,
                            inputs, fields, marshal, marshal_with, url_for)
 
-import models_restful as models
+import models
+from datetime import datetime, timedelta
 
-daily_fields = {
-    'timestamp' : fields.DateTime,
-    'id' : fields.String
-}
+news_list = ['JTBC10news', 'MBCnews', 'sbsnews8', 'tvchosun01']
 
 video_fields = {
-    'videoId' : fields.Integer,
-    'duration' : fields.Integer,
+    'id' : fields.Integer,
+    'videoId' : fields.String,
     'title': fields.String,
-    'content' : fields.String
+    'vector' : fields.String
 }
 
 
-def daily_or_404(daily_id):
+def videos_or_404():
     try:
-        daily = models.Daily.get(models.Daily.id==daily_id)
-    except models.Daily.DoesNotExist:
-        abort(404)
-    else:
-        return daily
+        videos = []
+        for i, news in enumerate(news_list):
+            channel = models.Channel.select().where(models.Channel.name ** news).get()
+            videos_c = models.Video.select().order_by(models.Video.publishedAt.desc()).where(
+                models.Video.channel == channel,
+                models.Video.publishedAt > datetime.utcnow() - timedelta(days=1)
+            )
+            for video in videos_c:
+                videos.append(video)
 
-
-def video_or_404(video_id):
-    try:
-        video = models.Video.get(models.Daily.id==video_id)
     except models.Video.DoesNotExist:
         abort(404)
     else:
-        return video
+        return videos
 
-
-class DailyList(Resource):
-    def __init__(self):
-        self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument(
-            'title',
-            require=True,
-            help='No course title provided',
-            location=['form', 'json']
-        )
-        self.reqparse.add_argument(
-            'url',
-            require=True,
-            help='No course URL provided',
-            location=['form', 'json'],
-            type=inputs.url
-        )
-        super().__init__()
-
-    def get(self):
-        dailies = [marshal(daily, daily_fields)
-                   for daily in models.Daily.select()]
-        return {'dailies': dailies}
-
-
-class Daily(Resource):
-    def get(self, id):
-        video = [marshal(video, daily_fields)
-                   for video in models.Video.select()]
-        return {'dailies': video}
 
 class Video(Resource):
 
-    @marshal_with(video_fields)
-    def get(self, id):
-        return daily_or_404(id)
+    def get(self):
+        videos = [marshal(video, video_fields) for video in videos_or_404()]
+        return {'videos': videos}
 
 
 dailies_api = Blueprint('resources.dailies', __name__)
 api = Api(dailies_api)
-api.add_resource(
-    DailyList,
-    '/api/v1/dailies',
-    endpoin='dailies'
-)
-
-api.add_resource(
-    Daily,
-    '/api/v1/dailies/<int:id>',
-    endpoin='daily'
-)
 
 api.add_resource(
     Video,
-    '/api/v1/dailies/<int:id>',
-    endpoin='video'
+    '/api/v1/videos/',
+    endpoint='videos'
 )
