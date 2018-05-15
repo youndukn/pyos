@@ -43,9 +43,9 @@ app.register_blueprint(dailies_api)
 # key. See http://flask.pocoo.org/docs/0.12/quickstart/#sessions.
 app.secret_key = 'REPLACE ME - this value is here as a placeholder.'
 
-
+@app.route('/<type>', methods=('GET', 'POST'))
 @app.route('/')
-def index():
+def index(type=None):
 
     channels = [[], [], [], [], []]
     for i, news in enumerate(news_list):
@@ -55,11 +55,17 @@ def index():
             models.Video.publishedAt > datetime.utcnow() - timedelta(days=1)
         )
         channels[i] = videos_c
-
-    dailies = Dailies(channels)
+    retrain=False
+    if type=="1":
+        retrain=True
+    try:
+        dailies = Dailies(channels, retrain)
+        channels = dailies.process_kmeans_clusters()
+    except:
+        channels = dailies.process_kmeans_clusters()
 
     if dailies:
-        return render_template('new_video_stream.html', stream=dailies.process_kmeans_clusters())
+        return render_template('new_video_stream.html', stream=channels)
     else:
         return render_template('layout.html')
 
@@ -153,4 +159,4 @@ if __name__ == '__main__':
     # When running locally, disable OAuthlib's HTTPs verification. When
     # running in production *do not* leave this option enabled.
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    app.run('localhost', 8090, debug=True)
+    app.run('0.0.0.0', 8090, debug=True)

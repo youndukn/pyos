@@ -174,6 +174,39 @@ def translate(model_encoder,
     print()
     return output_text.replace(mark_end, ""), vector
 
+
+def vector(model_encoder,
+              model_decoder,
+              tokenizer_src,
+              tokenizer_dest,
+              input_text,
+              true_output_text=None):
+    """Translate a single text-string."""
+
+
+    token_start = tokenizer_dest.word_index[mark_start.strip()]
+    token_end = tokenizer_dest.word_index[mark_end.strip()]
+
+    # Convert the input-text to integer-tokens.
+    # Note the sequence of tokens has to be reversed.
+    # Padding is probably not necessary.
+    input_tokens = tokenizer_src.text_to_tokens(text=input_text,
+                                                reverse=True,
+                                                padding=True)
+
+    # Get the output of the encoder's GRU which will be
+    # used as the initial state in the decoder's GRU.
+    # This could also have been the encoder's final state
+    # but that is really only necessary if the encoder
+    # and decoder use the LSTM instead of GRU because
+    # the LSTM has two internal states.
+    initial_state = model_encoder.predict(input_tokens)
+
+    vector = initial_state
+
+    return "", vector
+
+
 def get_model(autoencoder=True):
 
     #
@@ -457,7 +490,7 @@ def get_vectors(input_videos, autoencoder=False):
     keywords = []
     vectors = []
     for video in input_videos:
-        keyword, vector = translate(model_encoder,
+        keyword, vector = vector(model_encoder,
           model_decoder,
           tokenizer_src,
           tokenizer_dest,
@@ -483,7 +516,7 @@ def get_k_mean_clustered(input_videos, num_clusters = 40):
     kmeans = tf.contrib.factorization.KMeansClustering(
         num_clusters=num_clusters, use_mini_batch=False)
 
-    num_iterations = 10
+    num_iterations = 2
     previous_centers = None
 
     for _ in range(num_iterations):
@@ -492,7 +525,6 @@ def get_k_mean_clustered(input_videos, num_clusters = 40):
         if previous_centers is not None:
             print ('delta:', cluster_centers - previous_centers)
         previous_centers = cluster_centers
-    print ('cluster centers:', cluster_centers)
 
     # map the input points to their clusters
     cluster_indices = list(kmeans.predict_cluster_index(input_fn))
@@ -505,7 +537,6 @@ def get_k_mean_clustered(input_videos, num_clusters = 40):
             if cc == cluster_indices[i]:
                 video_title = input_videos[i].title
                 cluster_index = cluster_indices[i]
-                print('video:', video_title, 'is in cluster', cluster_index)
 
     return cluster_centers
 

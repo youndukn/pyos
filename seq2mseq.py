@@ -176,6 +176,37 @@ def translate(model_encoder,
     print()
     return output_text.replace(mark_end, ""), vector
 
+def get_vector(model_encoder,
+              model_decoder,
+              tokenizer_src,
+              tokenizer_dest,
+              input_text,
+              true_output_text=None):
+    """Translate a single text-string."""
+
+
+    token_start = tokenizer_dest.word_index[mark_start.strip()]
+    token_end = tokenizer_dest.word_index[mark_end.strip()]
+
+    # Convert the input-text to integer-tokens.
+    # Note the sequence of tokens has to be reversed.
+    # Padding is probably not necessary.
+    input_tokens = tokenizer_src.text_to_tokens(text=input_text,
+                                                reverse=True,
+                                                padding=True)
+
+    # Get the output of the encoder's GRU which will be
+    # used as the initial state in the decoder's GRU.
+    # This could also have been the encoder's final state
+    # but that is really only necessary if the encoder
+    # and decoder use the LSTM instead of GRU because
+    # the LSTM has two internal states.
+    initial_state = model_encoder.predict(input_tokens)
+
+    vector = initial_state
+
+    return vector
+
 def get_model():
 
     #
@@ -646,40 +677,17 @@ def get_vectors(input_videos):
         print("Error trying to load a checkpoint.")
         print(error)
 
-    keywords = []
     vectors = []
 
     for i, video in enumerate(input_videos):
-        keyword, vector = translate(model_encoder,
+        vector = get_vector(model_encoder,
           k_model_decoder,
           tokenizer_src,
           k_tokenizer_dest,
           video.ptitle)
-        keywords.append(keyword)
         vectors.append(vector)
-        if i < 3:
-            print(keyword, vector)
 
-
-    for i, video in enumerate(input_videos):
-        keyword, vector = translate(model_encoder,
-                  p_model_decoder,
-                  tokenizer_src,
-                  p_tokenizer_dest,
-                  video.ptitle)
-        if i < 3:
-            print(keyword, vector)
-
-    for i, video in enumerate(input_videos):
-        keyword, vector = translate(model_encoder,
-                  a_model_decoder,
-                  tokenizer_src,
-                  a_tokenizer_dest,
-                  video.ptitle)
-        if i < 3:
-            print(keyword, vector)
-
-    return keywords, vectors
+    return vectors
 
 
 def get_k_mean_clustered(input_videos, num_clusters = 40):

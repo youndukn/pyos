@@ -7,6 +7,7 @@ import seq2mseq
 import operator
 import numpy
 from peewee import IntegrityError
+import array
 
 queries = ["테러", "사고", "건강", "일본", "북미",
            "한미", "정상회담", "선거", "김기식", "외교", "국방", "국회",
@@ -22,7 +23,7 @@ priors = ["단독"]
 
 class Dailies:
 
-    def __init__(self, channels):
+    def __init__(self, channels, retrain = False):
         self.channels = channels
         self.final_videos = []
         self.videos = []
@@ -31,8 +32,12 @@ class Dailies:
         self.nouns = []
 
         self.__process_videos()
-        self.__process_vector()
-        self.__process_noun()
+
+        if retrain:
+            self.__process_vector()
+            self.__process_noun()
+        else:
+            self.__process_vector_from_prev()
         self.__filter_videos()
 
     def __process_videos(self):
@@ -53,11 +58,18 @@ class Dailies:
                 self.videos.append(video)
 
     def __process_vector(self):
-        keywords, vectors  = seq2mseq.get_vectors(self.videos)
-        for video, keyword, vector in zip(self.videos, keywords, vectors):
-            setattr(video, "keyword_processed", keyword)
+        vectors  = seq2mseq.get_vectors(self.videos)
+        for video, vector in zip(self.videos, vectors):
             setattr(video, "vector_processed", vector)
-            video.vector = numpy.array(vector).tobytes()
+            video.vector = numpy.array(vector, numpy.float32).tobytes()
+            print(video.vector)
+            video.save()
+
+    def __process_vector_from_prev(self):
+        for video in self.videos:
+            if len(video.vector)>0:
+                value = numpy.frombuffer(video.vector)
+                setattr(video, "vector_processed", numpy.array([value,]))
             video.save()
 
     def __process_noun(self):
@@ -187,6 +199,10 @@ class Dailies:
         self.filtered = []
         for video in self.videos:
             include = True
+
+            if len(video.vector)==0:
+                include = False
+
             for removable in removables:
                 if removable in video.title:
                     include = False
