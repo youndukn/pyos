@@ -61,7 +61,7 @@ class TextFilter:
         return str(self)
 
     def remove_texts_from_list(self,
-                     removable_texts = ['SBS', 'JTBC', 'MBC', 'TVCHOSUN', 'KBS', '뉴스', 'News'],
+                     removable_texts = ['SBS', 'JTBC', 'MBC', 'TVCHOSUN', 'KBS', '뉴스', 'News', '뉴스투데이', '뉴스데스크'],
                      refresh=False):
 
         if refresh:

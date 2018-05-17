@@ -20,7 +20,9 @@ import naver
 
 from process_dailies import Dailies
 
-news_list = ['JTBC10news', 'MBCnews', 'sbsnews8', 'tvchosun01']
+dailies = None
+
+news_list = [ 'sbsnews8', 'MBCnews', 'tvchosun01', 'JTBC10news',]
 
 block_list = []
 
@@ -47,28 +49,56 @@ app.secret_key = 'REPLACE ME - this value is here as a placeholder.'
 @app.route('/')
 def index(type=None):
 
+    currentTime = datetime.utcnow()
+    dailies = Dailies()
     channels = [[], [], [], [], []]
     for i, news in enumerate(news_list):
         channel = models.Channel.select().where(models.Channel.name ** news).get()
         videos_c = models.Video.select().order_by(models.Video.publishedAt.desc()).where(
             models.Video.channel == channel,
-            models.Video.publishedAt > datetime.utcnow() - timedelta(days=1)
+            models.Video.publishedAt > currentTime - timedelta(days=1),
+            models.Video.publishedAt < currentTime
         )
         channels[i] = videos_c
     retrain=False
+
     if type=="1":
         retrain=True
     try:
-        dailies = Dailies(channels, retrain)
+
+        dailies.preprocess(channels, retrain)
         channels = dailies.process_kmeans_clusters()
     except:
-        channels = dailies.process_kmeans_clusters()
+        pass
 
     if dailies:
         return render_template('new_video_stream.html', stream=channels)
     else:
         return render_template('layout.html')
 
+@app.route('/vectors')
+def vectors(type=None):
+    dailies = Dailies()
+    currentTime = datetime.utcnow()
+    for i in range(1000):
+        channels = [[], [], [], [], []]
+        for i, news in enumerate(news_list):
+            channel = models.Channel.select().where(models.Channel.name ** news).get()
+            videos_c = models.Video.select().order_by(models.Video.publishedAt.desc()).where(
+                models.Video.channel == channel,
+                models.Video.publishedAt > currentTime - timedelta(days=1),
+                models.Video.publishedAt < currentTime
+            )
+            channels[i] = videos_c
+
+        try:
+            dailies.preprocess(channels, retrain=True)
+        except:
+            pass
+        currentTime = currentTime - timedelta(days=1)
+        print(currentTime)
+
+    return render_template('layout.html')
 
 @app.route('/admin/<type>', methods=('GET', 'POST'))
 @app.route('/admin', methods=('GET', 'POST'))
@@ -154,9 +184,13 @@ def oauth2callback():
 
 
 if __name__ == '__main__':
+
     models.initialized()
 
     # When running locally, disable OAuthlib's HTTPs verification. When
     # running in production *do not* leave this option enabled.
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    app.run('0.0.0.0', 8090, debug=True)
+
+
+    app.run('localhost', 8090, debug=True)
+
