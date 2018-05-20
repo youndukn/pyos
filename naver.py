@@ -58,8 +58,8 @@ def crawl_naver(is_go=True):
                 'User-Agent' : 'curl/7.43.0',
                 'Accept' : '*/*',
                 'Content-Type' : 'application/xml',
-                'X-Naver-Client-Id' : 'pYksg35GM1D9OBO7wv3U',
-                'X-Naver-Client-Secret' : '_bxuFXyrkS'
+                'X-Naver-Client-Id' : 'pYksg35GM1D9OBO7wv3S',
+                'X-Naver-Client-Secret' : '_bxuFXyrkU'
             }
 
             req = urllib.request.Request(fullURL, headers=headers)
@@ -73,10 +73,11 @@ def crawl_naver(is_go=True):
 def refactor_t_type():
 
     keyword_models = models_trainable.Keyword.select()
+    print(len(keyword_models))
 
-    for keyword_model in keyword_models:
+    for i, keyword_model in enumerate(keyword_models):
 
-        print(keyword_model.name)
+        print(i, keyword_model.name, keyword_model.t_type)
         if keyword_model.name in political:
             try:
                 keyword_model.t_type = 1
@@ -84,7 +85,17 @@ def refactor_t_type():
             except:
                 print("not saved")
                 pass
-        elif keyword_model.t_type == 2 or keyword_model.t_type == 3 or keyword_model.t_type == -1:
+        elif keyword_model.t_type == -1 and len(keyword_model.name)==1:
+            keyword_model.t_type = -2
+            keyword_model.save()
+        elif keyword_model.t_type == -1:
+            try:
+                keyword_model.t_type = 4
+                keyword_model.save()
+            except:
+                print("not saved")
+                pass
+            """
             t_type = input("Is {} right? ".format(keyword_model.t_type))
 
             if t_type != keyword_model.t_type and t_type != "":
@@ -94,7 +105,7 @@ def refactor_t_type():
                 except:
                     print("not saved")
                     pass
-
+            """
 
 def store_naver_items(items, is_go, keyword_model):
 
@@ -108,9 +119,8 @@ def store_naver_items(items, is_go, keyword_model):
                 content=item.description.get_text(strip=True),
                 originalLink=item.originallink.get_text(strip=True)
             )
-
+            print(item.title.get_text(strip=True))
         except models_trainable.IntegrityError:
-            print("Video not created")
             if not is_go:
                 print("time : " + item.title.get_text(strip=True) + item.pubdate.get_text(strip=True))
                 break
@@ -126,10 +136,9 @@ def store_naver_items(items, is_go, keyword_model):
             )
 
         except models_trainable.IntegrityError:
-            print("Relationship Already Exists")
             pass
 
 
 if __name__ == '__main__':
-    crawl_naver()
-    #refactor_t_type()
+    #crawl_naver()
+    refactor_t_type()

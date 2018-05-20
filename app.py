@@ -19,6 +19,7 @@ import youtube
 import naver
 
 from process_dailies import Dailies
+from seq2mseq import Seq2MSeq
 
 dailies = None
 
@@ -64,12 +65,10 @@ def index(type=None):
 
     if type=="1":
         retrain=True
-    try:
 
-        dailies.preprocess(channels, retrain)
-        channels = dailies.process_kmeans_clusters()
-    except:
-        pass
+    dailies.preprocess(channels, retrain)
+    channels = dailies.process_kmeans_clusters()
+
 
     if dailies:
         return render_template('new_video_stream.html', stream=channels)
@@ -97,6 +96,16 @@ def vectors(type=None):
             pass
         currentTime = currentTime - timedelta(days=1)
         print(currentTime)
+
+    return render_template('layout.html')
+
+@app.route('/embed')
+def embed():
+
+    videos_c = models.Video.select()
+
+    seq = Seq2MSeq()
+    seq.projection(videos_c)
 
     return render_template('layout.html')
 

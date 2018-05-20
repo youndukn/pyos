@@ -1,4 +1,4 @@
-
+import os
 import tensorflow as tf
 import numpy as np
 import pickle
@@ -6,6 +6,7 @@ import pickle
 import models_trainable
 
 from TokenizerWrap import TokenizerWrap
+from tensorflow.contrib.tensorboard.plugins import projector
 
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Input, Dense, GRU, Embedding
@@ -13,6 +14,7 @@ from tensorflow.python.keras.optimizers import RMSprop
 from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 
 from process_text import TextFilter
+import numpy
 
 k_path_checkpoint = './check_p/k_21_checkpoint.keras'
 p_path_checkpoint = './check_p/p_21_checkpoint.keras'
@@ -593,7 +595,7 @@ class Seq2MSeq():
 
         k_y_data = \
             {
-                'decoder_output': k_decoder_output_data
+                    'decoder_output': k_decoder_output_data
             }
 
         p_x_data = \
@@ -699,6 +701,38 @@ class Seq2MSeq():
                     print('video:', video_title, 'is in cluster', cluster_index)
 
         return cluster_centers
+
+    def projection(self, input_videos):
+
+        LOG_DIR = 'logs'
+        metadata = os.path.join('metadata.tsv')
+
+        input_data = []
+        labels = []
+        for video in input_videos:
+            input_data.append(numpy.frombuffer(video.vector).tolist())
+            labels.append(video.channel.name +" "+video.title)
+
+        images = tf.Variable(input_data, name='data')
+
+        with open(metadata, 'w') as metadata_file:
+            for row in labels:
+                metadata_file.write('%s\n' % row)
+
+        with tf.Session() as sess:
+            saver = tf.train.Saver([images])
+
+            sess.run(images.initializer)
+            saver.save(sess, os.path.join(LOG_DIR, 'title.ckpt'))
+
+            config = projector.ProjectorConfig()
+            # One can add multiple embeddings.
+            embedding = config.embeddings.add()
+            embedding.tensor_name = images.name
+            # Link this tensor to its metadata file (e.g. labels).
+            embedding.metadata_path = metadata
+            # Saves a config file that TensorBoard will read during startup.
+            projector.visualize_embeddings(tf.summary.FileWriter(LOG_DIR), config)
 
 if __name__ == '__main__':
     seq2mseq = Seq2MSeq()

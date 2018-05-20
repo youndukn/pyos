@@ -1,7 +1,8 @@
 from process_text import TextFilter
 import models_trainable
 #import seq2conv
-from seq2mseq import Seq2MSeq
+#from seq2mseq import Seq2MSeq
+import seq2keyword
 
 import operator
 import numpy
@@ -30,7 +31,7 @@ class Dailies:
         self.filtered = []
         self.processed_channels = []
         self.nouns = []
-        self.seq2mseq = Seq2MSeq()
+        #self.seq2mseq = Seq2MSeq()
         if channels:
             self.preprocess(channels, retrain)
 
@@ -71,7 +72,9 @@ class Dailies:
                 self.videos.append(video)
 
     def __process_vector(self):
-        vectors  = self.seq2mseq.get_vectors(self.videos)
+        #vectors  = self.seq2mseq.get_vectors(self.videos)
+        strings, vectors = seq2keyword.get_vectors(self.videos)
+
         for video, vector in zip(self.videos, vectors):
             setattr(video, "vector_processed", vector)
             video.vector = numpy.array(vector, numpy.float32).tobytes()
@@ -263,7 +266,9 @@ class Dailies:
 
     def process_kmeans_clusters(self, numb_clusters=30):
 
-        mean_cluster = self.seq2mseq.get_k_mean_clustered(self.filtered, numb_clusters)
+        #mean_cluster = self.seq2mseq.get_k_mean_clustered(self.filtered, numb_clusters)
+        mean_cluster = seq2keyword.get_k_mean_clustered(self.filtered, numb_clusters)
+
         self.processed_channels = []
 
         bucket_video = []

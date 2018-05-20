@@ -90,5 +90,13 @@ class TextFilter:
 
         return text_nouns
 
+    def get_matches(self, keyword_list):
+        matches = []
+        for keyword in keyword_list:
+            if keyword in self.__processed_text:
+                matches.append(keyword)
+
+        return matches
+
     def __str__(self):
         return " ".join(str(x[0]) for x in self.__processed_text_list)
