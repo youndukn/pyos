@@ -19,6 +19,8 @@ video_fields = {
     'vector' : fields.Raw
 }
 
+removables = ["날씨", "클로징", "다시보기", "헤드라인"]
+
 
 def videos_or_404():
     try:
@@ -27,10 +29,18 @@ def videos_or_404():
             channel = models.Channel.select().where(models.Channel.name ** news).get()
             videos_c = models.Video.select().order_by(models.Video.publishedAt.desc()).where(
                 models.Video.channel == channel,
-                models.Video.publishedAt > datetime.utcnow() - timedelta(days=1)
+                models.Video.publishedAt > datetime.utcnow() - timedelta(days=1),
+                models.Video.duration < 150
             )
+
             for video in videos_c:
-                videos.append(video)
+                has_removable = False
+                for removable in removables:
+
+                    if removable in video.title:
+                        has_removable = True
+                if not has_removable:
+                    videos.append(video)
 
     except models.Video.DoesNotExist:
         abort(404)
@@ -62,6 +72,9 @@ class Video(Resource):
             video_field["channel"] = video.channel.name
             video_field["vector"] = numpy.frombuffer(video_field["vector"]).tolist()
             videos.append(video_field)
+
+        with open('video.json', 'w', encoding="utf-8") as make_file:
+            json.dump({'video':{'videos': videos}}, make_file, ensure_ascii=False, indent="\t")
 
         return {'videos': videos}
 

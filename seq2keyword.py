@@ -72,6 +72,7 @@ def translate(model_encoder,
               tokenizer_src,
               tokenizer_dest,
               input_text,
+              model_embedding,
               true_output_text=None):
     """Translate a single text-string."""
 
@@ -143,9 +144,14 @@ def translate(model_encoder,
 
         # Input this data to the decoder and get the predicted output.
         decoder_output = model_decoder.predict(x_data)
-
+        decoder_embedding = model_embedding.predict(x_data)
+        print(decoder_embedding)
+        vector = decoder_embedding[0, count_tokens, :]
         # Get the last predicted token as a one-hot encoded array.
         token_onehot = decoder_output[0, count_tokens, :]
+        indexes = token_onehot.argsort()[-3:][::-1]
+        for index in indexes:
+            print(index, token_onehot[index], tokenizer_dest.token_to_word(index))
 
         # Convert to an integer-token.
         token_int = np.argmax(token_onehot)
@@ -158,6 +164,7 @@ def translate(model_encoder,
 
         # Increment the token-counter.
         count_tokens += 1
+        break
 
     # Sequence of tokens output by the decoder.
     output_tokens = decoder_input_data[0]
@@ -181,6 +188,7 @@ def get_vector(model_encoder,
               tokenizer_src,
               tokenizer_dest,
               input_text,
+                model_embedding,
               true_output_text=None):
     """Translate a single text-string."""
 
@@ -281,11 +289,12 @@ def get_model(f_count):
 
         # Connect the final dense layer that converts to
         # one-hot encoded arrays.
+
         decoder_output = decoder_dense(net)
 
-        return decoder_output
+        return decoder_output, net
 
-    decoder_output = connect_decoder(initial_state=encoder_output)
+    decoder_output, net = connect_decoder(initial_state=encoder_output)
 
     model_train = Model(inputs=[encoder_input, decoder_input],
                         outputs=[decoder_output])
@@ -293,10 +302,13 @@ def get_model(f_count):
     model_encoder = Model(inputs=[encoder_input],
                           outputs=[encoder_output])
 
-    decoder_output = connect_decoder(initial_state=decoder_initial_state)
+    decoder_output, decoder_embedding = connect_decoder(initial_state=decoder_initial_state)
 
     model_decoder = Model(inputs=[decoder_input, decoder_initial_state],
                           outputs=[decoder_output])
+
+    model_embedding = Model(inputs=[decoder_input, decoder_initial_state],
+                          outputs=[decoder_embedding])
 
     optimizer = RMSprop(lr=1e-3)
 
@@ -305,7 +317,7 @@ def get_model(f_count):
     model_train.compile(optimizer=optimizer,
                         loss=sparse_cross_entropy,
                         target_tensors=[decoder_target])
-    return model_train, model_encoder, model_decoder
+    return model_train, model_encoder, model_decoder, model_embedding
 
 
 def train_model(reload=False):
@@ -399,7 +411,7 @@ def train_model(reload=False):
     decoder_input_data = tokens_dest[:, :-1]
     decoder_output_data = tokens_dest[:, 1:]
 
-    model_train, model_encoder, model_decoder = get_model(f_count)
+    model_train, model_encoder, model_decoder, model_embedding = get_model(f_count)
 
     callback_checkpoint = ModelCheckpoint(filepath=path_checkpoint,
                                           monitor='val_loss',
@@ -468,7 +480,7 @@ def get_vectors(input_videos):
                                    reverse=False,
                                    num_words=f_count + 4)
 
-    model_train, model_encoder, model_decoder =get_model(f_count)
+    model_train, model_encoder, model_decoder, model_embedding =get_model(f_count)
 
     try:
         model_train.load_weights(path_checkpoint)
@@ -483,7 +495,8 @@ def get_vectors(input_videos):
           model_decoder,
           tokenizer_src,
           tokenizer_dest,
-          video.ptitle)
+          video.ptitle,
+                                    model_embedding)
         keywords.append(keyword)
         vectors.append(vector)
 
@@ -530,5 +543,4 @@ def get_k_mean_clustered(input_videos, num_clusters = 40):
     return cluster_centers
 
 if __name__ == '__main__':
-
-    train_model(True)
+    train_model(False)

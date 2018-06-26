@@ -23,7 +23,7 @@ from seq2mseq import Seq2MSeq
 
 dailies = None
 
-news_list = [ 'sbsnews8', 'MBCnews', 'tvchosun01', 'JTBC10news',]
+news_list = ['sbsnews8', 'MBCnews', 'tvchosun01', 'JTBC10news',]
 
 block_list = []
 
@@ -44,7 +44,7 @@ app.register_blueprint(dailies_api)
 # Note: A secret key is included in the sample so that it works, but if youp
 # use this code in your application please replace this with a truly secret
 # key. See http://flask.pocoo.org/docs/0.12/quickstart/#sessions.
-app.secret_key = 'REPLACE ME - this value is here as a placeholder.'
+app.secret_key = 'mysecretkey'
 
 @app.route('/<type>', methods=('GET', 'POST'))
 @app.route('/')
@@ -61,14 +61,13 @@ def index(type=None):
             models.Video.publishedAt < currentTime
         )
         channels[i] = videos_c
-    retrain=False
+    retrain=True
 
     if type=="1":
-        retrain=True
+        retrain=False
 
     dailies.preprocess(channels, retrain)
     channels = dailies.process_kmeans_clusters()
-
 
     if dailies:
         return render_template('new_video_stream.html', stream=channels)
@@ -199,7 +198,6 @@ if __name__ == '__main__':
     # When running locally, disable OAuthlib's HTTPs verification. When
     # running in production *do not* leave this option enabled.
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-
 
     app.run('localhost', 8090, debug=True)
 
